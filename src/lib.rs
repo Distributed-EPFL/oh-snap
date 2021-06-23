@@ -22,10 +22,10 @@ impl<T> Snap<T> {
         assert!((0..=self.len()).contains(&at), "`snap`-ing out of range");
 
         let left_buf = self.buf.clone();
-        let left_range = self.range.start..at;
+        let left_range = self.range.start..(self.range.start + at);
 
         let right_buf = self.buf;
-        let right_range = at..self.range.end;
+        let right_range = (self.range.start + at)..self.range.end;
 
         (
             Snap {

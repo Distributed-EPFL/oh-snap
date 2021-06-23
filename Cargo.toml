@@ -1,6 +1,6 @@
 [package]
 name = "oh-snap"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2018"
 
 authors = ["Matteo Monti <matteo.monti@epfl.ch>", "Manuel Vidigueira <manuel.ribeirovidigueira@epfl.ch>"]
