@@ -1,7 +1,17 @@
 [package]
 name = "oh-snap"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2018"
+
+authors = ["Matteo Monti <matteo.monti@epfl.ch>", "Manuel Vidigueira <manuel.ribeirovidigueira@epfl.ch>"]
+license-file = "LICENSE"
+description = """
+A thread-safe, owned, heap-allocated array which can be split and merged efficiently, i.e., without moves or memory (de-)allocations.
+"""
+repository = "https://github.com/distributed-epfl/oh-snap"
+readme = "README.md"
+
+keywords = ["array", "split", "merge", "owned", "thread-safe"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
