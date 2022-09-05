@@ -1,7 +1,9 @@
-use std::ops::{Deref, DerefMut, Index, IndexMut, Range};
-use std::slice;
-use std::slice::SliceIndex;
-use std::sync::Arc;
+use std::{
+    ops::{Deref, DerefMut, Index, IndexMut, Range},
+    slice,
+    slice::SliceIndex,
+    sync::Arc,
+};
 
 pub struct Snap<T> {
     buf: Arc<Vec<T>>,
@@ -45,6 +47,7 @@ impl<T> Snap<T> {
             left.buf.as_ptr() == right.buf.as_ptr(),
             "merging `Snaps` of different origins"
         );
+
         assert!(
             left.range.end == right.range.start,
             "merging non-continuogus `Snaps`"
