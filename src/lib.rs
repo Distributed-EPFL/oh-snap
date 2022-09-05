@@ -101,6 +101,23 @@ impl<T> Snap<T> {
     }
 
     #[inline]
+    pub fn chunks(mut self, chunk_size: usize) -> Vec<Self> {
+        let mut chunks = Vec::with_capacity((self.len() + chunk_size - 1) / chunk_size);
+
+        while self.len() > chunk_size {
+            self = {
+                let (chunk, tail) = self.snap(chunk_size);
+                chunks.push(chunk);
+                tail
+            };
+        }
+
+        chunks.push(self);
+
+        chunks
+    }
+
+    #[inline]
     pub fn try_unwrap(self) -> Result<Vec<T>, Self> {
         match Arc::try_unwrap(self.buf) {
             Ok(vec) => Ok(vec),
@@ -333,5 +350,31 @@ mod tests {
         }
 
         assert!(snap.iter().zip([1, 2, 3, 4].iter()).all(|(l, r)| l == r));
+    }
+
+    #[test]
+    fn chunks_balanced() {
+        let snap = Snap::new(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+        let chunks = snap.chunks(4);
+
+        assert_eq!(chunks.len(), 4);
+
+        assert_eq!(*chunks[0].range(), 0..4);
+        assert_eq!(*chunks[1].range(), 4..8);
+        assert_eq!(*chunks[2].range(), 8..12);
+        assert_eq!(*chunks[3].range(), 12..16);
+    }
+
+    #[test]
+    fn chunks_unbalanced() {
+        let snap = Snap::new(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+        let chunks = snap.chunks(5);
+
+        assert_eq!(chunks.len(), 4);
+
+        assert_eq!(*chunks[0].range(), 0..5);
+        assert_eq!(*chunks[1].range(), 5..10);
+        assert_eq!(*chunks[2].range(), 10..15);
+        assert_eq!(*chunks[3].range(), 15..16);
     }
 }
