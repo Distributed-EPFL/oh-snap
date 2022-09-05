@@ -88,12 +88,12 @@ impl<T> Snap<T> {
     }
 
     #[inline]
-    fn as_slice(&self) -> &[T] {
+    pub fn as_slice(&self) -> &[T] {
         &self.buf[self.range.clone()]
     }
 
     #[inline]
-    fn as_mut_slice(&mut self) -> &mut [T] {
+    pub fn as_mut_slice(&mut self) -> &mut [T] {
         let ptr = self.buf[self.range.clone()].as_ptr() as *mut T;
         let len = self.len();
 
