@@ -41,8 +41,14 @@ impl<T> Snap<T> {
 
     #[inline]
     pub fn merge(left: Self, right: Self) -> Self {
-        assert!(left.buf.as_ptr() == right.buf.as_ptr(), "merging `Snaps` of different origins");
-        assert!(left.range.end == right.range.start, "merging non-continuogus `Snaps`");
+        assert!(
+            left.buf.as_ptr() == right.buf.as_ptr(),
+            "merging `Snaps` of different origins"
+        );
+        assert!(
+            left.range.end == right.range.start,
+            "merging non-continuogus `Snaps`"
+        );
 
         let buf = left.buf;
         let range = left.range.start..right.range.end;
@@ -67,7 +73,7 @@ impl<T> Snap<T> {
 
     #[inline]
     pub fn get<I: SliceIndex<[T]>>(&self, index: I) -> Option<&<I as SliceIndex<[T]>>::Output> {
-        self.slice().get(index)
+        self.as_slice().get(index)
     }
 
     #[inline]
@@ -75,19 +81,19 @@ impl<T> Snap<T> {
         &mut self,
         index: I,
     ) -> Option<&mut <I as SliceIndex<[T]>>::Output> {
-        self.slice_mut().get_mut(index)
+        self.as_mut_slice().get_mut(index)
     }
-    
+
     #[inline]
-    fn slice(&self) -> &[T] {
+    fn as_slice(&self) -> &[T] {
         &self.buf[self.range.clone()]
     }
-    
+
     #[inline]
-    fn slice_mut(&mut self) -> &mut [T] {
+    fn as_mut_slice(&mut self) -> &mut [T] {
         let ptr = self.buf[self.range.clone()].as_ptr() as *mut T;
         let len = self.len();
-        
+
         unsafe { slice::from_raw_parts_mut(ptr, len) }
     }
 
@@ -108,14 +114,14 @@ impl<T, I: SliceIndex<[T]>> Index<I> for Snap<T> {
 
     #[inline]
     fn index(&self, index: I) -> &Self::Output {
-        Index::index(self.slice(), index)
+        Index::index(self.as_slice(), index)
     }
 }
 
 impl<T, I: SliceIndex<[T]>> IndexMut<I> for Snap<T> {
     #[inline]
     fn index_mut(&mut self, index: I) -> &mut Self::Output {
-        IndexMut::index_mut(self.slice_mut(), index)
+        IndexMut::index_mut(self.as_mut_slice(), index)
     }
 }
 
@@ -124,7 +130,7 @@ impl<'a, T> IntoIterator for &'a Snap<T> {
     type IntoIter = slice::Iter<'a, T>;
 
     fn into_iter(self) -> slice::Iter<'a, T> {
-        self.slice().into_iter()
+        self.as_slice().into_iter()
     }
 }
 
@@ -133,7 +139,7 @@ impl<'a, T> IntoIterator for &'a mut Snap<T> {
     type IntoIter = slice::IterMut<'a, T>;
 
     fn into_iter(self) -> slice::IterMut<'a, T> {
-        self.slice_mut().into_iter()
+        self.as_mut_slice().into_iter()
     }
 }
 
@@ -141,13 +147,13 @@ impl<T> Deref for Snap<T> {
     type Target = [T];
 
     fn deref(&self) -> &[T] {
-        self.slice()
+        self.as_slice()
     }
 }
 
 impl<T> DerefMut for Snap<T> {
     fn deref_mut(&mut self) -> &mut [T] {
-        self.slice_mut()
+        self.as_mut_slice()
     }
 }
 
@@ -159,36 +165,36 @@ mod tests {
     fn snap() {
         let snap = Snap::new(vec![0, 1, 2, 3]);
         let (left, right) = snap.snap(2);
-        
+
         assert_eq!(left[..], [0, 1]);
         assert_eq!(right[..], [2, 3]);
     }
-    
+
     #[test]
     fn double_snap() {
         let snap = Snap::new(vec![0, 1, 2, 3]);
         let (left, right) = snap.snap(2);
         let (left, middle) = left.snap(1);
-        
+
         assert_eq!(left[..], [0]);
         assert_eq!(middle[..], [1]);
         assert_eq!(right[..], [2, 3]);
     }
-    
+
     #[test]
     fn snap_empty_left() {
         let snap = Snap::new(vec![0, 1, 2, 3]);
         let (_, snap) = snap.snap(4);
         assert_eq!(snap[..], []);
     }
-    
+
     #[test]
     fn snap_empty_right() {
         let snap = Snap::new(vec![0, 1, 2, 3]);
         let (snap, _) = snap.snap(0);
         assert_eq!(snap[..], []);
     }
-    
+
     #[test]
     #[should_panic(expected = "`snap`-ing out of range")]
     fn snap_out_of_range() {
@@ -200,22 +206,22 @@ mod tests {
     fn merge() {
         let snap = Snap::new(vec![0, 1, 2, 3]);
         let (left, right) = snap.snap(2);
-        
+
         let snap = Snap::merge(left, right);
         assert_eq!(snap[..], [0, 1, 2, 3]);
     }
-    
+
     #[test]
     #[should_panic(expected = "merging `Snaps` of different origins")]
     fn merge_snaps_different_origins() {
         let snap = Snap::new(vec![0, 1, 2, 3]);
         let snap_prime = Snap::new(vec![0, 1, 2, 3]);
-        
+
         let (left, _right) = snap.snap(2);
         let (_left, right) = snap_prime.snap(2);
         Snap::merge(left, right);
     }
-    
+
     #[test]
     #[should_panic]
     fn merge_swapped() {
@@ -223,7 +229,7 @@ mod tests {
         let (left, right) = snap.snap(2);
         let _ = Snap::merge(right, left);
     }
-    
+
     #[test]
     #[should_panic]
     fn merge_gap() {
@@ -232,12 +238,12 @@ mod tests {
         let (left, _) = left.snap(1);
         let _ = Snap::merge(left, right);
     }
-    
+
     #[test]
     fn len() {
         let snap = Snap::new(vec![0, 1, 2, 3]);
         assert_eq!(snap.len(), 4);
-        
+
         let (left, right) = snap.snap(2);
         assert_eq!(left.len(), 2);
         assert_eq!(right.len(), 2);
@@ -247,16 +253,16 @@ mod tests {
     fn is_complete() {
         let snap = Snap::new(vec![0, 1, 2, 3]);
         assert!(snap.is_complete());
-        
+
         let (left, right) = snap.snap(2);
         assert!(!left.is_complete());
         assert!(!right.is_complete());
-        
+
         let snap = Snap::new(vec![0, 1, 2, 3]);
         let (snap, _) = snap.snap(4);
         assert!(snap.is_complete());
     }
-    
+
     #[test]
     fn range() {
         let snap = Snap::new(vec![0, 1, 2, 3]);
@@ -264,11 +270,11 @@ mod tests {
         assert_eq!(*left.range(), 0..2);
         assert_eq!(*right.range(), 2..4);
     }
-        
+
     #[test]
     fn get() {
         let snap = Snap::new(vec![0, 1, 2, 3]);
-        
+
         for i in 0..3 {
             assert_eq!(snap.get(i), Some(&[0, 1, 2, 3][i]));
         }
@@ -277,34 +283,34 @@ mod tests {
     #[test]
     fn get_non_existant() {
         let snap = Snap::new(vec![0, 1, 2, 3]);
-        
+
         for i in 4..9 {
             assert_eq!(snap.get(i), None);
         }
     }
-    
+
     #[test]
     fn get_mut() {
         let mut snap = Snap::new(vec![0, 1, 2, 3]);
-        
+
         for i in 0..3 {
             *snap.get_mut(i).unwrap() += 1;
             assert_eq!(snap[i], [1, 2, 3, 4][i]);
         }
     }
-    
+
     #[test]
     fn unwrap() {
         let snap = Snap::new(vec![0, 1, 2, 3]);
         let vec = snap.try_unwrap();
         assert!(vec.is_ok());
     }
-    
+
     #[test]
     fn unwrap_snapped() {
         let snap = Snap::new(vec![0, 1, 2, 3]);
         let (left, _right) = snap.snap(2);
-        
+
         let vec = left.try_unwrap();
         assert!(vec.is_err());
     }
@@ -314,15 +320,15 @@ mod tests {
         let snap = Snap::new(vec![0, 1, 2, 3]);
         assert!(snap.iter().zip([0, 1, 2, 3].iter()).all(|(l, r)| l == r));
     }
-    
+
     #[test]
     fn iter_mut() {
         let mut snap = Snap::new(vec![0, 1, 2, 3]);
-        
+
         for i in snap.iter_mut() {
             *i += 1;
         }
-        
+
         assert!(snap.iter().zip([1, 2, 3, 4].iter()).all(|(l, r)| l == r));
     }
 }
